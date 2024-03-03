@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  server_go:
+    build:
+      context: ./server_go
+    ports:
+      - "8080:8080"
+    container_name: server_go
+    
+
+  server_client:
+    build:
+      context: ./server_client
+    container_name: server_client
+    environment:
+      - SERVER_URL=http://server_go:8080
+    depends_on:
+      - server_go
