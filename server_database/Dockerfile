@@ -1,13 +1,13 @@
-# Usa una imagen base de MySQL
-FROM mysql:latest
+#UTILIZAMOS LA ULTIMA IMAGEN DE POSTGRES
+FROM postgres:latest
+#ESTABLECEMOS LAS VARIABLES DE ENTONRO
+ENV POSTGRES_USER admin
+ENV POSTGRES_PASSWORD 12345
+#ESTABLECEMOS EL DIRECTORIO DE TRABAJO
+WORKDIR /app
+#COPIAMOS LAS INSTRUCCIONES
+COPY ./init.sql /docker-entrypoint-initdb.d/
+#CAMBIA LOS PERMISOS DE EJECUCIÓN 
+RUN chmod 755 /docker-entrypoint-initdb.d/init.sql
 
-# Define la variable de entorno MYSQL_ROOT_PASSWORD
-ENV MYSQL_ROOT_PASSWORD 12345
-
-# Copia el archivo init.sql al contenedor
-COPY init.sql /docker-entrypoint-initdb.d/
-
-# Cambia el directorio de trabajo al directorio de scripts de inicialización
-WORKDIR /docker-entrypoint-initdb.d/
-
-#docker run --name server_db server_database
+# docker run --name postgres -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=12345 -p 5432:5432 -d postgres

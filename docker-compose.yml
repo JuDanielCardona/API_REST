@@ -7,12 +7,14 @@ services:
     ports:
       - "8080:8080"
     container_name: server_go
+    environment:
+      - DATABASE_URL=http://server_database:5432
 
   server_datebase:
     build:
       context: ./server_database
     ports:
-      - "3306"
+      - "3306:3306"
     container_name: server_database
 
   server_client:
