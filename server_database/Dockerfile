@@ -10,4 +10,4 @@ COPY ./init.sql /docker-entrypoint-initdb.d/
 #CAMBIA LOS PERMISOS DE EJECUCIÓN 
 RUN chmod 755 /docker-entrypoint-initdb.d/init.sql
 
-# docker run --name postgres -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=12345 -p 5432:5432 -d postgres
+# docker run --name server_database -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=12345 -d server_database

@@ -1,6 +1,16 @@
 version: '3.8'
 
 services:
+
+  server_database:
+    build:
+      context: ./server_database
+    ports:
+      - "5432:5432"
+    expose:
+      - "5432"
+    container_name: server_database
+
   server_go:
     build:
       context: ./server_go
@@ -8,23 +18,20 @@ services:
       - "8080:8080"
     container_name: server_go
     environment:
-      - DATABASE_URL=http://server_database:5432
-
-  server_datebase:
-    build:
-      context: ./server_database
-    ports:
-      - "3306:3306"
-    container_name: server_database
-
-  server_client:
-    build:
-      context: ./server_client
-    container_name: server_client
-    environment:
-      - SERVER_URL=http://server_go:8080
+      - DATABASE_URL=server_database
     depends_on:
-      - server_go
+      - server_database
 
 
-#Le vanta el composer con docker-compose up --build
+
+#  server_client:
+#    build:
+#      context: ./server_client
+#    container_name: server_client
+#    environment:
+#      - SERVER_URL=http://server_go:8080
+#    depends_on:
+#      - server_go
+
+
+#Levanta el composer con docker-compose up --build
