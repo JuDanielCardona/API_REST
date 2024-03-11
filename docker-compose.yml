@@ -23,15 +23,4 @@ services:
       - server_database
 
 
-
-#  server_client:
-#    build:
-#      context: ./server_client
-#    container_name: server_client
-#    environment:
-#      - SERVER_URL=http://server_go:8080
-#    depends_on:
-#      - server_go
-
-
 #Levanta el composer con docker-compose up --build

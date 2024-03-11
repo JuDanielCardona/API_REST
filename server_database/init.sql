@@ -17,16 +17,16 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Insertar datos de prueba en la tabla users
 INSERT INTO users (name, password, email) VALUES
-('Juan Pérez', 'contraseña1', 'juanperez@gmail.com'),
-('María García', 'contraseña2', 'mariagarcia@gmail.com'),
-('Luis Rodríguez', 'contraseña3', 'luisrodriguez@gmail.com'),
-('Ana Martínez', 'contraseña4', 'anamartinez@gmail.com'),
-('José López', 'contraseña5', 'joselopez@gmail.com'),
-('Sofía Hernández', 'contraseña6', 'sofiahernandez@gmail.com'),
-('Carlos Gómez', 'contraseña7', 'carlosgomez@gmail.com'),
-('Laura Díaz', 'contraseña8', 'lauradiaz@gmail.com'),
-('Pedro Ruiz', 'contraseña9', 'pedroruiz@gmail.com'),
-('Mónica Sánchez', 'contraseña10', 'monicasanchez@gmail.com');
+('Juan', 'contrasena', 'juanperez@gmail.com'),
+('Maria', 'contrasena', 'mariagarcia@gmail.com'),
+('Luis', 'contrasena', 'luisrodriguez@gmail.com'),
+('Ana', 'contrasena', 'anamartinez@gmail.com'),
+('Jose', 'contrasena', 'joselopez@gmail.com'),
+('Sofia', 'contrasena', 'sofiahernandez@gmail.com'),
+('Carlos', 'contrasena', 'carlosgomez@gmail.com'),
+('Laura', 'contrasena', 'lauradiaz@gmail.com'),
+('Pedro', 'contrasena', 'pedroruiz@gmail.com'),
+('Monica', 'contrasena', 'monicasanchez@gmail.com');
 
 
 --psql -U admin -d users_db -f init.sql

@@ -1,9 +1,11 @@
-package handlers
+package security
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
+	"taller_docker/models"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -68,4 +70,42 @@ func Verificacion_handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Solicitud HTTP:", r.URL.Path, "Send: 200 OK")
 	fmt.Fprintln(w, response)
 
+}
+
+func IsValidToken(r *http.Request) bool {
+	authHeader := r.Header.Get("Authorization")
+	token := strings.Replace(authHeader, "Bearer ", "", 1)
+	validation, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Error: Could not sign: %v", token.Header["alg"])
+		}
+		return []byte("12345"), nil
+	})
+
+	if err != nil || !validation.Valid {
+		fmt.Println("Error: Invalid JWT Token")
+		return false
+	}
+
+	claims, ok := validation.Claims.(jwt.MapClaims)
+	if !ok || claims["iss"] != "ingesis.uniquindio.edu.co" {
+		fmt.Println("Error: The token issuer is not valid")
+		return false
+	}
+	return true
+}
+
+func GenerateToken(user *models.User) string {
+
+	// Generar el token JWT
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["sub"] = user.Name
+	claims["exp"] = time.Now().Add(time.Hour).Unix() // Token válido por una hora
+	claims["iss"] = "ingesis.uniquindio.edu.co"
+
+	// Firmar el token con una clave secreta y obtener el string del token
+	tokenString, _ := token.SignedString([]byte("12345"))
+
+	return tokenString
 }
