@@ -16,7 +16,7 @@ func main() {
 	database.DB.AutoMigrate(models.User{})
 	router := mux.NewRouter()
 	PORT := ":8080"
-	login_EndPoints(router.PathPrefix("/apiLogin").Subrouter())
+	login_EndPoints(router.PathPrefix("/apiSesion").Subrouter())
 	funtions_EndPoints(router.PathPrefix("/apiUser").Subrouter())
 
 	fmt.Println("Init server on port: " + PORT)
@@ -24,15 +24,18 @@ func main() {
 }
 
 func login_EndPoints(router *mux.Router) {
-	//http://localhost:8080/apiLogin/login
+	//http://localhost:8080/apiSesion/
 	router.HandleFunc("/login", handlers.Login_handler).Methods("POST")
+	router.HandleFunc("/recover/{email}", handlers.RecoverPassword_handler).Methods("GET")
+	router.HandleFunc("/update/{email}", handlers.UpdatePassword_handler).Methods("POST")
+
 }
 
 func funtions_EndPoints(router *mux.Router) {
 	//http://localhost:8080/apiUser/
 	router.HandleFunc("/add", handlers.AddUser_handler).Methods("POST")
 	router.HandleFunc("/all", handlers.GetAllUsers_handler).Methods("GET")
-	router.HandleFunc("/{id}", handlers.GetUserById_handler).Methods("GET")
+	router.HandleFunc("/search/{id}", handlers.GetUserById_handler).Methods("GET")
 	router.HandleFunc("/delete", handlers.DeleteUser_handler).Methods("DELETE")
-	router.HandleFunc("/{id}", handlers.UpdateUser_handler).Methods("PUT")
+	router.HandleFunc("/update/{id}", handlers.UpdateUser_handler).Methods("PUT")
 }

@@ -13,10 +13,8 @@ func SearchUser(user *models.User) (bool, error) {
 	return true, nil
 }
 
-func GetUsers() ([]models.User, error) {
+func GetUsers(page, pageSize int) ([]models.User, error) {
 	var users []models.User
-	page := 1      // Número de página predeterminado
-	pageSize := 10 // Tamaño de página predeterminado
 
 	// Calcula el desplazamiento basado en la página y el tamaño de la página
 	offset := (page - 1) * pageSize
@@ -29,7 +27,6 @@ func GetUsers() ([]models.User, error) {
 
 	return users, nil
 }
-
 func GetUserById(id string) (*models.User, error) {
 	var user models.User
 	DB.First(&user, id)
@@ -39,14 +36,14 @@ func GetUserById(id string) (*models.User, error) {
 	return &user, nil
 }
 
-func AddUser(user models.User) (*models.User, error) {
-	newUser := DB.Create(&user)
+func AddUser(addUser models.User) (*models.User, error) {
+	newUser := DB.Create(&addUser)
 	err := newUser.Error
 
 	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return &addUser, nil
 }
 
 func DeleteUser(id int) error {
@@ -80,9 +77,11 @@ func UpdateUser(id int, updatedUser models.User) error {
 
 	// Actualizar los campos del usuario
 	user.Name = updatedUser.Name
-	user.Password = updatedUser.Password
 	user.Email = updatedUser.Email
 	user.Date = updatedUser.Date
+	if user.Password != updatedUser.Password {
+		fmt.Println("LOG: Password change prevented.")
+	}
 
 	// Guardar los cambios en la base de datos
 	if err := DB.Save(&user).Error; err != nil {
@@ -90,4 +89,43 @@ func UpdateUser(id int, updatedUser models.User) error {
 	}
 
 	return nil
+}
+
+func RecoverPassword(email string) (string, error) {
+	var userToUpdate models.User
+	DB.Where("email = ?", email).First(&userToUpdate)
+
+	if userToUpdate.Password == "" {
+		return "", errors.New("Error: User not found")
+	}
+	return userToUpdate.Password, nil
+}
+
+func GetUserByEmail(email string) (models.User, error) {
+	var user models.User
+	err := DB.Where("email = ?", email).First(&user).Error
+	if err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
+func UpdatePassword(user models.User, email string) (string, error) {
+	var userToUpdate models.User
+	if err := DB.Where("email = ?", email).First(&userToUpdate).Error; err != nil {
+		return "", errors.New("Error: User not found")
+	}
+
+	// Verificar que la nueva contraseña sea diferente de la anterior
+	if userToUpdate.Password == user.Password {
+		return "", errors.New("Error: New password must be different from the current one")
+	}
+
+	// Actualizar la contraseña del usuario
+	userToUpdate.Password = user.Password
+	if err := DB.Save(&userToUpdate).Error; err != nil {
+		return "", err
+	}
+
+	return userToUpdate.Password, nil
 }

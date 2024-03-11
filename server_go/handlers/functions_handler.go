@@ -13,14 +13,24 @@ import (
 )
 
 func GetAllUsers_handler(w http.ResponseWriter, r *http.Request) {
-
 	if !(security.IsValidToken(r)) {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	var users []models.User
-	users, err := database.GetUsers()
+	// Parsear parámetros de paginación
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1 // Establecer página predeterminada si no se proporciona o es inválida
+	}
+
+	pageSize, err := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10 // Establecer tamaño de página predeterminado si no se proporciona o es inválido
+	}
+
+	// Obtener usuarios con paginación
+	users, err := database.GetUsers(page, pageSize)
 	if err != nil {
 		http.Error(w, "Error: Failed to get users", http.StatusInternalServerError)
 		return
@@ -38,7 +48,6 @@ func GetAllUsers_handler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "\nOK: All users search successfully.\n")
 	w.Write(formattedJSON)
-
 }
 
 func GetUserById_handler(w http.ResponseWriter, r *http.Request) {
@@ -126,9 +135,9 @@ func DeleteUser_handler(w http.ResponseWriter, r *http.Request) {
 
 func UpdateUser_handler(w http.ResponseWriter, r *http.Request) {
 	// Obtener el ID del cliente de la URL
-	vars := mux.Vars(r)
-	urlID := vars["id"]
-	fmt.Println("ID recibido en la URL:", urlID)
+	info := mux.Vars(r)
+	ID := info["id"]
+	fmt.Println("ID recibido en la URL:", ID)
 
 	// Decodificar el JSON del cuerpo de la solicitud
 	var user models.User
@@ -139,13 +148,13 @@ func UpdateUser_handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verificar si el ID del JSON es diferente al ID de la URL
-	if strconv.Itoa(user.Id) != urlID {
+	if strconv.Itoa(user.Id) != ID {
 		http.Error(w, "Error: ID in JSON does not match ID in URL", http.StatusBadRequest)
 		return
 	}
 
 	// Convertir el ID a entero
-	userID, err := strconv.Atoi(urlID)
+	userID, err := strconv.Atoi(ID)
 	if err != nil {
 		http.Error(w, "Error: Invalid user ID", http.StatusBadRequest)
 		return
@@ -175,4 +184,75 @@ func UpdateUser_handler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "\nOK: User updated successfully.\n")
 	w.Write(formattedJSON)
+}
+
+func RecoverPassword_handler(w http.ResponseWriter, r *http.Request) {
+
+	info := mux.Vars(r)
+	email := info["email"]
+
+	var user models.User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if user.Email != email {
+		http.Error(w, "Error: Requester does not match the database (Email)", http.StatusBadRequest)
+		return
+	}
+
+	if user.Name != "" {
+		userFound, err := database.GetUserByEmail(user.Email)
+		if err != nil {
+			http.Error(w, "Error: Email not found", http.StatusNotFound)
+			return
+		}
+		if userFound.Name != user.Name {
+			http.Error(w, "Error: Requester does not match the database (Name)", http.StatusBadRequest)
+			return
+		}
+	}
+
+	password, err := database.RecoverPassword(info["email"])
+	if err != nil {
+		http.Error(w, "Error: User not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "\nOK: Password was recuperated.\nPassword is: ")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(password))
+	fmt.Fprintf(w, "\n")
+}
+
+func UpdatePassword_handler(w http.ResponseWriter, r *http.Request) {
+	if !security.IsValidToken(r) {
+		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	info := mux.Vars(r)
+	email := info["email"]
+
+	var user models.User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	newPassword, err := database.UpdatePassword(user, email)
+	if err != nil {
+		if err.Error() == "Error: New password must be different from the current one" {
+			http.Error(w, "Error: New password must be different from the current one", http.StatusBadRequest)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, "\nOK: Password was Updated.\nNew password is: ")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(newPassword))
+	fmt.Fprintf(w, "\n")
 }
