@@ -37,6 +37,12 @@ func GetUserById(id string) (*models.User, error) {
 }
 
 func AddUser(addUser models.User) (*models.User, error) {
+
+	var existingUser models.User
+	if err := DB.Where("email = ?", addUser.Email).First(&existingUser).Error; err == nil {
+		return nil, errors.New("Error")
+	}
+
 	newUser := DB.Create(&addUser)
 	err := newUser.Error
 
@@ -46,8 +52,7 @@ func AddUser(addUser models.User) (*models.User, error) {
 	return &addUser, nil
 }
 
-func DeleteUser(id int) error {
-	fmt.Println("SE INGRESA ID: ", id)
+func DeleteUser(id string) error {
 	var user models.User
 	if err := DB.First(&user, id).Error; err != nil {
 		return errors.New("user not found")

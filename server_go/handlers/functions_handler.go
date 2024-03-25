@@ -13,37 +13,34 @@ import (
 )
 
 func GetAllUsers_handler(w http.ResponseWriter, r *http.Request) {
-	if !(security.IsValidToken(r)) {
+
+	if !security.IsValidToken(r, "") {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	// Parsear parámetros de paginación
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil || page < 1 {
-		page = 1 // Establecer página predeterminada si no se proporciona o es inválida
+		page = 1
 	}
 
 	pageSize, err := strconv.Atoi(r.URL.Query().Get("pageSize"))
 	if err != nil || pageSize < 1 {
-		pageSize = 10 // Establecer tamaño de página predeterminado si no se proporciona o es inválido
+		pageSize = 10
 	}
 
-	// Obtener usuarios con paginación
 	users, err := database.GetUsers(page, pageSize)
 	if err != nil {
 		http.Error(w, "Error: Failed to get users", http.StatusInternalServerError)
 		return
 	}
 
-	// Formatear la información de los usuarios en un formato más legible
 	formattedJSON, err := json.MarshalIndent(users, "", "  ")
 	if err != nil {
 		http.Error(w, "Error: Failed to format JSON", http.StatusInternalServerError)
 		return
 	}
 
-	// Establecer el encabezado Content-Type y el código de estado
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "\nOK: All users search successfully.\n")
@@ -51,7 +48,7 @@ func GetAllUsers_handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUserById_handler(w http.ResponseWriter, r *http.Request) {
-	if !security.IsValidToken(r) {
+	if !security.IsValidToken(r, "") {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
@@ -82,31 +79,44 @@ func GetUserById_handler(w http.ResponseWriter, r *http.Request) {
 
 func AddUser_handler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
+
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	createdUser, err := database.AddUser(user)
-	if err != nil {
-		http.Error(w, "Error: User could not be created", http.StatusBadRequest)
+	if user.Name == "" || user.Password == "" || user.Email == "" {
+		http.Error(w, "Error: User, Password & Email info are obligatory", http.StatusBadRequest)
 		return
 	}
 
-	// Formatear la información del usuario creado en un formato más legible
+	createdUser, err := database.AddUser(user)
+	if err != nil {
+		http.Error(w, "Error: This email is already in use", http.StatusBadRequest)
+		return
+	}
+
+	tokenString := security.GenerateToken(createdUser)
+	if tokenString == "" {
+		http.Error(w, "Error: Failed to sign token", http.StatusInternalServerError)
+		return
+	}
+
 	formattedJSON, err := json.MarshalIndent(createdUser, "", "  ")
 	if err != nil {
 		http.Error(w, "Error: Failed to format JSON", http.StatusInternalServerError)
 		return
 	}
 
-	// Establecer el encabezado Content-Type y el código de estado
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	fmt.Fprintf(w, "\nOK: User created successfully.\n")
 	w.Write(formattedJSON)
+	fmt.Fprintf(w, "\nToken:\n")
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, tokenString)
 }
 
 func DeleteUser_handler(w http.ResponseWriter, r *http.Request) {
@@ -117,13 +127,14 @@ func DeleteUser_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := user.Id
-	if !security.IsValidToken(r) {
+	id := user.Name
+	if !security.IsValidToken(r, id) {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	err = database.DeleteUser(id)
+	params := mux.Vars(r)
+	err = database.DeleteUser(params["id"])
 	if err != nil {
 		http.Error(w, "Error: User not found to delete", http.StatusNotFound)
 		return
@@ -160,7 +171,7 @@ func UpdateUser_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !security.IsValidToken(r) {
+	if !security.IsValidToken(r, user.Name) {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
@@ -228,10 +239,6 @@ func RecoverPassword_handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdatePassword_handler(w http.ResponseWriter, r *http.Request) {
-	if !security.IsValidToken(r) {
-		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
-		return
-	}
 
 	info := mux.Vars(r)
 	email := info["email"]
@@ -240,6 +247,11 @@ func UpdatePassword_handler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	id := user.Name
+	if !security.IsValidToken(r, id) {
+		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 

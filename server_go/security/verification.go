@@ -72,7 +72,8 @@ func Verificacion_handler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func IsValidToken(r *http.Request) bool {
+func IsValidToken(r *http.Request, subEmail string) bool {
+
 	authHeader := r.Header.Get("Authorization")
 	token := strings.Replace(authHeader, "Bearer ", "", 1)
 	validation, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
@@ -83,7 +84,7 @@ func IsValidToken(r *http.Request) bool {
 	})
 
 	if err != nil || !validation.Valid {
-		fmt.Println("Error: Invalid JWT Token")
+		fmt.Println("Error: JWT Token has expired")
 		return false
 	}
 
@@ -92,6 +93,15 @@ func IsValidToken(r *http.Request) bool {
 		fmt.Println("Error: The token issuer is not valid")
 		return false
 	}
+
+	if subEmail != "" {
+		userID, ok := claims["sub"].(string)
+		if !ok || userID != subEmail {
+			fmt.Println("Error: User in token does not match expected user")
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -100,11 +110,10 @@ func GenerateToken(user *models.User) string {
 	// Generar el token JWT
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["sub"] = user.Name
-	claims["exp"] = time.Now().Add(time.Hour).Unix() // Token válido por una hora
+	claims["sub"] = user.Email
+	claims["exp"] = time.Now().Add(time.Hour).Unix()
 	claims["iss"] = "ingesis.uniquindio.edu.co"
 
-	// Firmar el token con una clave secreta y obtener el string del token
 	tokenString, _ := token.SignedString([]byte("12345"))
 
 	return tokenString
