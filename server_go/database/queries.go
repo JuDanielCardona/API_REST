@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"taller_docker/models"
+
+	"gorm.io/gorm"
 )
 
 func SearchUser(user *models.User) (bool, error) {
@@ -29,9 +31,11 @@ func GetUsers(page, pageSize int) ([]models.User, error) {
 }
 func GetUserById(id string) (*models.User, error) {
 	var user models.User
-	DB.First(&user, id)
-	if user.Id == 0 {
-		return nil, errors.New("Error: User not found")
+	if err := DB.First(&user, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("Error: User not found")
+		}
+		return nil, err
 	}
 	return &user, nil
 }
@@ -52,35 +56,27 @@ func AddUser(addUser models.User) (*models.User, error) {
 	return &addUser, nil
 }
 
-func DeleteUser(id string) error {
+func DeleteUser(deletedUser models.User) error {
 	var user models.User
-	if err := DB.First(&user, id).Error; err != nil {
+	if err := DB.Where("id = ?", deletedUser.Id).First(&user).Error; err != nil {
 		return errors.New("user not found")
 	}
 
-	if user.Id == 0 {
-		return errors.New("user not found")
-	}
-
-	if err := DB.Delete(&user, id).Error; err != nil {
+	if err := DB.Delete(&user).Error; err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func UpdateUser(id int, updatedUser models.User) error {
-	fmt.Println("Se ingresó ID: ", id)
+func UpdateUser(updatedUser models.User) (models.User, error) {
 	var user models.User
-	if err := DB.Where("id = ?", id).First(&user).Error; err != nil {
-		return errors.New("user not found")
+	if err := DB.Where("id = ?", updatedUser.Id).First(&user).Error; err != nil {
+		return models.User{}, errors.New("user not found")
 	}
 
-	if user.Id == 0 {
-		return errors.New("user not found")
-	}
+	oldPassword := user.Password
 
-	// Actualizar los campos del usuario
 	user.Name = updatedUser.Name
 	user.Email = updatedUser.Email
 	user.Date = updatedUser.Date
@@ -88,12 +84,17 @@ func UpdateUser(id int, updatedUser models.User) error {
 		fmt.Println("LOG: Password change prevented.")
 	}
 
-	// Guardar los cambios en la base de datos
 	if err := DB.Save(&user).Error; err != nil {
-		return err
+		return models.User{}, err
 	}
 
-	return nil
+	if err := DB.Where("id = ?", updatedUser.Id).First(&user).Error; err != nil {
+		return models.User{}, errors.New("failed to reload user from database")
+	}
+
+	user.Password = oldPassword
+
+	return user, nil
 }
 
 func RecoverPassword(email string) (string, error) {

@@ -3,6 +3,7 @@ package security
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"taller_docker/models"
 	"time"
@@ -72,7 +73,7 @@ func Verificacion_handler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func IsValidToken(r *http.Request, subEmail string) bool {
+func IsValidToken(r *http.Request, sub string) bool {
 
 	authHeader := r.Header.Get("Authorization")
 	token := strings.Replace(authHeader, "Bearer ", "", 1)
@@ -94,9 +95,14 @@ func IsValidToken(r *http.Request, subEmail string) bool {
 		return false
 	}
 
-	if subEmail != "" {
-		userID, ok := claims["sub"].(string)
-		if !ok || userID != subEmail {
+	if sub != "" {
+		subFromTokenFloat, ok := claims["sub"].(float64)
+		if !ok {
+			fmt.Println("Error: Failed to convert sub claim to float64")
+			return false
+		}
+		subFromToken := strconv.FormatFloat(subFromTokenFloat, 'f', -1, 64)
+		if subFromToken != sub {
 			fmt.Println("Error: User in token does not match expected user")
 			return false
 		}
@@ -110,7 +116,7 @@ func GenerateToken(user *models.User) string {
 	// Generar el token JWT
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
-	claims["sub"] = user.Email
+	claims["sub"] = user.Id
 	claims["exp"] = time.Now().Add(time.Hour).Unix()
 	claims["iss"] = "ingesis.uniquindio.edu.co"
 

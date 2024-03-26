@@ -54,8 +54,11 @@ func GetUserById_handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := mux.Vars(r)
-	var user *models.User
-	user, _ = database.GetUserById(params["id"])
+	user, err := database.GetUserById(params["id"])
+	if err != nil {
+		http.Error(w, "Error: Failed to search user id ("+params["id"]+")", http.StatusInternalServerError)
+		return
+	}
 
 	if user == nil {
 		http.Error(w, "Error: User not found", http.StatusNotFound)
@@ -69,7 +72,7 @@ func GetUserById_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Establecer el encabezado Content-Type y el código de estado
+	// Establecer el encabezado Content-Type y enviar la respuesta
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -127,73 +130,48 @@ func DeleteUser_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := user.Name
-	if !security.IsValidToken(r, id) {
+	if !security.IsValidToken(r, strconv.Itoa(user.Id)) {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	params := mux.Vars(r)
-	err = database.DeleteUser(params["id"])
+	err = database.DeleteUser(user)
 	if err != nil {
-		http.Error(w, "Error: User not found to delete", http.StatusNotFound)
+		http.Error(w, "Error: Failed to update user", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "\nOK: User with id(%d) was deleted.\n", id)
+	fmt.Fprintf(w, "\nOK: User with id(%d) was deleted.\n", user.Id)
 }
 
 func UpdateUser_handler(w http.ResponseWriter, r *http.Request) {
-	// Obtener el ID del cliente de la URL
-	info := mux.Vars(r)
-	ID := info["id"]
-	fmt.Println("ID recibido en la URL:", ID)
-
-	// Decodificar el JSON del cuerpo de la solicitud
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
+		http.Error(w, "Error: Problem to covert JSON", http.StatusBadRequest)
 		return
 	}
 
-	// Verificar si el ID del JSON es diferente al ID de la URL
-	if strconv.Itoa(user.Id) != ID {
-		http.Error(w, "Error: ID in JSON does not match ID in URL", http.StatusBadRequest)
-		return
-	}
-
-	// Convertir el ID a entero
-	userID, err := strconv.Atoi(ID)
-	if err != nil {
-		http.Error(w, "Error: Invalid user ID", http.StatusBadRequest)
-		return
-	}
-
-	if !security.IsValidToken(r, user.Name) {
+	if !security.IsValidToken(r, strconv.Itoa(user.Id)) {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	// Llamar a la función de actualización del usuario
-	err = database.UpdateUser(userID, user)
+	updatedUser, err := database.UpdateUser(user)
 	if err != nil {
-		http.Error(w, "Error: User not found to update", http.StatusNotFound)
+		http.Error(w, "Error: Failed to update user", http.StatusInternalServerError)
 		return
 	}
 
-	formattedJSON, err := json.MarshalIndent(user, "", "  ")
+	formattedJSON, err := json.MarshalIndent(updatedUser, "", "  ")
 	if err != nil {
 		http.Error(w, "Error: Failed to format JSON", http.StatusInternalServerError)
 		return
 	}
 
-	// Establecer el encabezado Content-Type y el código de estado
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	fmt.Fprintf(w, "\nOK: User updated successfully.\n")
+	w.WriteHeader(http.StatusOK)
 	w.Write(formattedJSON)
 }
 

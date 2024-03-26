@@ -34,7 +34,7 @@ func login_EndPoints(router *mux.Router) {
 func funtions_EndPoints(router *mux.Router) {
 	//http://localhost:8080/apiUser/
 	router.HandleFunc("/add", handlers.AddUser_handler).Methods("POST")
-	router.HandleFunc("/update/{id}", handlers.UpdateUser_handler).Methods("PUT")
+	router.HandleFunc("/update", handlers.UpdateUser_handler).Methods("PUT")
 	router.HandleFunc("/delete/{id}", handlers.DeleteUser_handler).Methods("DELETE")
 	router.HandleFunc("/search/{id}", handlers.GetUserById_handler).Methods("GET")
 	router.HandleFunc("/all", handlers.GetAllUsers_handler).Methods("GET")

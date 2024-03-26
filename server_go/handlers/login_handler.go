@@ -41,6 +41,6 @@ func Login_handler(w http.ResponseWriter, r *http.Request) {
 
 	// Responder con el token JWT
 	w.Header().Set("Content-Type", "text/plain")
-	fmt.Println("routed correctly by /login")
+	fmt.Fprint(w, "Token: \n")
 	fmt.Fprint(w, tokenString)
 }
