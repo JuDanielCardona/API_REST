@@ -116,9 +116,9 @@ func GetUserByEmail(email string) (models.User, error) {
 	return user, nil
 }
 
-func UpdatePassword(user models.User, email string) (string, error) {
+func UpdatePassword(user models.User) (string, error) {
 	var userToUpdate models.User
-	if err := DB.Where("email = ?", email).First(&userToUpdate).Error; err != nil {
+	if err := DB.Where("email = ?", user.Email).First(&userToUpdate).Error; err != nil {
 		return "", errors.New("Error: User not found")
 	}
 

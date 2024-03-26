@@ -180,28 +180,15 @@ func RecoverPassword_handler(w http.ResponseWriter, r *http.Request) {
 	info := mux.Vars(r)
 	email := info["email"]
 
-	var user models.User
-	err := json.NewDecoder(r.Body).Decode(&user)
+	user, err := database.GetUserByEmail(email)
 	if err != nil {
-		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
+		http.Error(w, "Error: Email not found", http.StatusNotFound)
 		return
 	}
 
-	if user.Email != email {
-		http.Error(w, "Error: Requester does not match the database (Email)", http.StatusBadRequest)
+	if !security.IsValidToken(r, strconv.Itoa(user.Id)) {
+		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
-	}
-
-	if user.Name != "" {
-		userFound, err := database.GetUserByEmail(user.Email)
-		if err != nil {
-			http.Error(w, "Error: Email not found", http.StatusNotFound)
-			return
-		}
-		if userFound.Name != user.Name {
-			http.Error(w, "Error: Requester does not match the database (Name)", http.StatusBadRequest)
-			return
-		}
 	}
 
 	password, err := database.RecoverPassword(info["email"])
@@ -218,27 +205,27 @@ func RecoverPassword_handler(w http.ResponseWriter, r *http.Request) {
 
 func UpdatePassword_handler(w http.ResponseWriter, r *http.Request) {
 
-	info := mux.Vars(r)
-	email := info["email"]
-
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, "Error: Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	id := user.Name
-	if !security.IsValidToken(r, id) {
+
+	if !security.IsValidToken(r, strconv.Itoa(user.Id)) {
 		http.Error(w, "Error: Invalid token", http.StatusUnauthorized)
 		return
 	}
 
-	newPassword, err := database.UpdatePassword(user, email)
+	if user.Password == "" {
+		http.Error(w, "Error: Password info to update is obligatory", http.StatusBadRequest)
+		return
+	}
+
+	newPassword, err := database.UpdatePassword(user)
 	if err != nil {
-		if err.Error() == "Error: New password must be different from the current one" {
-			http.Error(w, "Error: New password must be different from the current one", http.StatusBadRequest)
-			return
-		}
+		http.Error(w, "Error: New password must be different from the current one", http.StatusBadRequest)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "\nOK: Password was Updated.\nNew password is: ")

@@ -27,15 +27,14 @@ func login_EndPoints(router *mux.Router) {
 	//http://localhost:8080/apiSesion/
 	router.HandleFunc("/login", handlers.Login_handler).Methods("POST")
 	router.HandleFunc("/recover/{email}", handlers.RecoverPassword_handler).Methods("GET")
-	router.HandleFunc("/update/{email}", handlers.UpdatePassword_handler).Methods("POST")
-
+	router.HandleFunc("/update", handlers.UpdatePassword_handler).Methods("POST")
 }
 
 func funtions_EndPoints(router *mux.Router) {
 	//http://localhost:8080/apiUser/
 	router.HandleFunc("/add", handlers.AddUser_handler).Methods("POST")
 	router.HandleFunc("/update", handlers.UpdateUser_handler).Methods("PUT")
-	router.HandleFunc("/delete/{id}", handlers.DeleteUser_handler).Methods("DELETE")
+	router.HandleFunc("/delete", handlers.DeleteUser_handler).Methods("DELETE")
 	router.HandleFunc("/search/{id}", handlers.GetUserById_handler).Methods("GET")
 	router.HandleFunc("/all", handlers.GetAllUsers_handler).Methods("GET")
 }
